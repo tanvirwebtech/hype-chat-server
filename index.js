@@ -77,7 +77,14 @@ async function run() {
                     if (err) throw err;
                     res.json(data);
                 });
+            } else {
+                res.status(404).json("no token");
             }
+        });
+
+        app.get("/offlineUsers", async (req, res) => {
+            const offlineUsers = await user.find({});
+            res.json(offlineUsers);
         });
 
         app.get("/messages/:userId", async (req, res) => {
@@ -105,13 +112,18 @@ async function run() {
                         process.env.JWT_SECRETE,
                         {},
                         (err, token) => {
+                            if (err) throw err;
                             res.cookie("token", token, {
                                 sameSite: "none",
                                 secure: true,
                             }).json("ok");
                         }
                     );
+                } else {
+                    res.status(401).json("invalid password");
                 }
+            } else {
+                res.status(404).json("user not found");
             }
         });
         app.post("/register", async (req, res) => {
@@ -155,7 +167,35 @@ const server = app.listen(port, () => {
 
 const wss = new ws.WebSocketServer({ server });
 
+function notifyAboutConnection() {
+    [...wss.clients].forEach((c) => {
+        c.send(
+            JSON.stringify({
+                online: [...wss.clients].map((user) => ({
+                    userId: user.userId,
+                    username: user.username,
+                })),
+            })
+        );
+    });
+}
+
 wss.on("connection", (connection, req) => {
+    connection.isAlive = true;
+    connection.timer = setInterval(() => {
+        connection.ping();
+        connection.deathTimer = setTimeout(() => {
+            connection.isAlive = false;
+            clearInterval(connection.timer);
+            connection.terminate();
+            notifyAboutConnection();
+        }, 3000);
+    }, 5000);
+
+    connection.on("pong", () => {
+        clearTimeout(connection.deathTimer);
+    });
+
     const cookie = req.headers.cookie;
 
     if (cookie) {
@@ -201,14 +241,5 @@ wss.on("connection", (connection, req) => {
         }
     });
 
-    [...wss.clients].forEach((c) => {
-        c.send(
-            JSON.stringify({
-                online: [...wss.clients].map((user) => ({
-                    userId: user.userId,
-                    username: user.username,
-                })),
-            })
-        );
-    });
+    notifyAboutConnection();
 });
