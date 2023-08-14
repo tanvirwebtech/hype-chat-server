@@ -15,12 +15,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // MIDDLEWARE
-app.use(
-    cors({
-        credentials: true,
-        origin: process.env.CLIENT_URL,
-    })
-);
+app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
