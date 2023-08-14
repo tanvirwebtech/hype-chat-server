@@ -17,8 +17,9 @@ const port = process.env.PORT || 5000;
 // MIDDLEWARE
 app.use(
     cors({
-        credentials: true,
-        origin: `${process.env.CLIENT_URL}`,
+        origin: "*",
+        credentials: true, //access-control-allow-credentials:true
+        optionSuccessStatus: 200,
     })
 );
 app.use(express.json());
