@@ -12,7 +12,7 @@ const Message = require("./models/message");
 
 // APP
 const app = express();
-const port = process.env.PORT || 4040;
+const port = process.env.PORT || 5000;
 
 // MIDDLEWARE
 app.use(
