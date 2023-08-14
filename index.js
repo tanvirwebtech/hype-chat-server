@@ -168,20 +168,20 @@ const server = app.listen(port, () => {
 
 const wss = new ws.WebSocketServer({ server });
 
-function notifyAboutConnection() {
-    [...wss.clients].forEach((c) => {
-        c.send(
-            JSON.stringify({
-                online: [...wss.clients].map((user) => ({
-                    userId: user.userId,
-                    username: user.username,
-                })),
-            })
-        );
-    });
-}
-
 wss.on("connection", (connection, req) => {
+    function notifyAboutConnection() {
+        [...wss.clients].forEach((c) => {
+            c.send(
+                JSON.stringify({
+                    online: [...wss.clients].map((user) => ({
+                        userId: user.userId,
+                        username: user.username,
+                    })),
+                })
+            );
+        });
+    }
+
     connection.isAlive = true;
     connection.timer = setInterval(() => {
         connection.ping();
@@ -190,7 +190,7 @@ wss.on("connection", (connection, req) => {
             clearInterval(connection.timer);
             connection.terminate();
             notifyAboutConnection();
-        }, 3000);
+        }, 1000);
     }, 5000);
 
     connection.on("pong", () => {
@@ -219,7 +219,6 @@ wss.on("connection", (connection, req) => {
     connection.on("message", async (message) => {
         const messageData = JSON.parse(message.toString());
         const { recipient, text } = messageData;
-
         if (recipient && text) {
             const messageDoc = await Message.create({
                 sender: connection.userId,
