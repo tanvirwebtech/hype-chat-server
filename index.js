@@ -100,53 +100,84 @@ async function run() {
         });
 
         app.post("/login", async (req, res) => {
-            const { username, password } = req.body;
-            const foundUser = await user.findOne({ username });
+            const { email } = req.body;
+
+            const foundUser = await user.findOne({ email: email });
             if (foundUser) {
-                const isPassOk = bcrypt.compareSync(
-                    password,
-                    foundUser.password
+                jwt.sign(
+                    { userId: foundUser._id, username: foundUser.username },
+                    process.env.JWT_SECRETE,
+                    {},
+                    (err, token) => {
+                        if (err) throw err;
+                        res.cookie("token", token, {
+                            sameSite: "none",
+                            secure: true,
+                        })
+                            .status(200)
+                            .json({
+                                userId: foundUser._id,
+                                username: foundUser.username,
+                            });
+                    }
                 );
-                if (isPassOk) {
-                    jwt.sign(
-                        { userId: foundUser._id, username },
-                        process.env.JWT_SECRETE,
-                        {},
-                        (err, token) => {
-                            if (err) throw err;
-                            res.cookie("token", token, {
-                                sameSite: "none",
-                                secure: true,
-                            }).json("ok");
-                        }
-                    );
-                } else {
-                    res.status(401).json("invalid password");
-                }
-            } else {
-                res.status(404).json("user not found");
             }
         });
-        app.post("/register", async (req, res) => {
-            const { username, password } = req.body;
 
+        // app.post("/login", async (req, res) => {
+        //     const { username, password } = req.body;
+        //     const foundUser = await user.findOne({ username });
+        //     if (foundUser) {
+        //         const isPassOk = bcrypt.compareSync(
+        //             password,
+        //             foundUser.password
+        //         );
+        //         if (isPassOk) {
+        //             jwt.sign(
+        //                 { userId: foundUser._id, username },
+        //                 process.env.JWT_SECRETE,
+        //                 {},
+        //                 (err, token) => {
+        //                     if (err) throw err;
+        //                     res.cookie("token", token, {
+        //                         sameSite: "none",
+        //                         secure: true,
+        //                     }).json("ok");
+        //                 }
+        //             );
+        //         } else {
+        //             res.status(401).json("invalid password");
+        //         }
+        //     } else {
+        //         res.status(404).json("user not found");
+        //     }
+        // });
+
+        app.post("/register", async (req, res) => {
+            const { email, username, password } = req.body;
             const hashedPass = bcrypt.hashSync(password, chatSalt);
             try {
                 const createdUser = await user.create({
+                    email,
                     username,
                     password: hashedPass,
                 });
+                res.status(201).json({ userId: createdUser._id, username });
                 jwt.sign(
                     { userId: createdUser._id, username },
                     process.env.JWT_SECRETE,
                     {},
                     (err, token) => {
+                        if (err) throw err;
                         res.cookie("token", token, {
                             sameSite: "none",
                             secure: true,
                         })
-                            .status(201)
-                            .json("ok");
+                            .status(200)
+                            .json({
+                                userId: foundUser._id,
+                                username: foundUser.username,
+                            });
                     }
                 );
             } catch (error) {
@@ -243,3 +274,7 @@ wss.on("connection", (connection, req) => {
 
     notifyAboutConnection();
 });
+
+// "engines": {
+//     "node": ">=14 <18"
+// }
